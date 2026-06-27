@@ -1,0 +1,70 @@
+enabled: true
+
+database:
+  url: sqlite:///github_activity.db
+
+github:
+  username: ""
+  timeout_seconds: 20
+  repository_filters:
+    include_private: true
+    include_public: true
+    exclude_archived: true
+    exclude_forks: true
+    name_allowlist: []
+    name_blocklist: []
+
+daily_commit:
+  tracking_filename: .activity-automation.md
+  min_commits: 1
+  max_commits: 3
+  commit_messages:
+    - "chore: update activity tracking"
+    - "docs: refresh automation notes"
+    - "chore: maintain repository activity"
+  force_allows_repeat_repository: true
+
+project_creator:
+  language: python
+  default_license: MIT
+  gitignore_template: Python
+  fallback_project_ideas:
+    - name: taskflow-lite
+      description: Lightweight task workflow automation service.
+    - name: insight-journal
+      description: Developer journal API for structured engineering notes.
+    - name: config-sentinel
+      description: Configuration validation utility for backend services.
+  templates:
+    python:
+      starter_filename: main.py
+      requirements:
+        - fastapi
+        - uvicorn
+    javascript:
+      starter_filename: index.js
+      requirements:
+        - express
+
+ai:
+  provider: gemini
+  model: gemini-2.5-flash
+  timeout_seconds: 15
+  gemini_url: https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent
+  openrouter_url: https://openrouter.ai/api/v1/chat/completions
+
+scheduler:
+  timezone: UTC
+  daily_commit_cron: "0 9 * * *"
+  project_creator_cron: "0 10 * * MON"
+
+runtime:
+  retry_count: 3
+  retry_backoff_seconds: 2
+
+logging:
+  level: INFO
+  directory: logs
+  filename: automation.log
+  max_bytes: 1048576
+  backup_count: 5
