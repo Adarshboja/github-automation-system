@@ -8,7 +8,7 @@ The project includes:
 - **Project Creator Agent** for new repository creation and seeding
 - **GitHub API integration** with authentication validation
 - **SQLite persistence** for state, commit history, and creation metadata
-- **AI-assisted project idea + README generation** with fallback behavior
+- **AI-assisted project idea + README generation** with provider retries and deterministic fallback behavior
 
 ## 1. Project Overview
 
@@ -90,9 +90,12 @@ The runtime configuration is stored in `config.yaml`.
 
 ### `ai`
 
-- `provider`: `gemini` or `openrouter`
-- `model`: model name used for AI requests
+- `provider`: primary provider, `gemini` or `openrouter`
+- `model`: Gemini model name used for AI requests
+- `openrouter_model`: OpenRouter model name used when the secondary provider is configured
 - `timeout_seconds`: AI request timeout
+- `retry_count`: bounded retry count for transient failures
+- `retry_backoff_seconds`: exponential backoff base delay
 - `gemini_url`: Gemini endpoint template
 - `openrouter_url`: OpenRouter endpoint
 - `gemini_api_key`: loaded from `.env`
@@ -116,6 +119,12 @@ The runtime configuration is stored in `config.yaml`.
 - `filename`: log file name
 - `max_bytes`: rotating log file size
 - `backup_count`: number of rotated log files
+
+AI failures do not stop project creation. The service validates project JSON, retries transient provider failures, uses OpenRouter when configured, and falls back to a deterministic project idea and locally generated README. API keys are loaded from `.env` and are never written to logs.
+
+### GitHub Actions workflow permission
+
+Creating or updating ordinary files uses the repository `Contents: write` permission. Creating or updating files under `.github/workflows/` also requires workflow permission: for a fine-grained personal access token, grant repository `Workflows: write` and `Contents: write`; for a classic personal access token, grant the `repo` scope and the `workflow` scope. Configure these on GitHub under **Settings > Developer settings > Personal access tokens**, and ensure the selected repository is included. If workflow permission is unavailable, the Project Creator skips only the workflow file, logs the reason, and keeps the other files and repository creation successful.
 
 ## 5. API Key Setup
 
@@ -264,51 +273,3 @@ Set:
 ```yaml
 enabled: false
 ```
-
-When disabled, the CLI exits before creating the GitHub client workflow or making GitHub API calls.
-
-## Directory Structure
-
-The source tree separates agents, services, database, GitHub client, utilities, config, scheduler, state manager, models, repositories, and tests. This keeps the two automation agents independent while sharing infrastructure.
-
-## Design Decisions
-
-## Why SQLite
-
-SQLite is simple to operate, reliable for local automation, and sufficient for serialized agent execution without requiring database infrastructure.
-
-## Why PyGithub
-
-PyGithub provides a maintained Python abstraction over GitHub authentication, repository listing, file commits, and repository creation.
-
-## Why SQLAlchemy
-
-SQLAlchemy gives typed ORM models, migrations-ready structure, transactions, and a clean repository pattern over SQLite.
-
-## Why FastAPI
-
-FastAPI provides a lightweight operational app surface and keeps the architecture ready for future API-triggered execution without changing agent internals.
-
-## Security
-
-- Secrets are loaded from `.env`, not committed.
-- The kill switch prevents external API calls.
-- Tokens should use the least required GitHub scopes.
-- Logs avoid writing secret values.
-- `.gitignore` excludes local databases, logs, virtual environments, and `.env`.
-
-## Future Improvements
-
-- Add Alembic migrations.
-- Add Prometheus metrics.
-- Add webhook-triggered execution.
-- Add richer project templates.
-- Add distributed locking for multi-host scheduling.
-
-## License
-
-MIT
-
-## Contributing
-
-Open a focused pull request with tests for behavior changes. Keep modules small, typed, and aligned with the existing clean architecture boundaries.
